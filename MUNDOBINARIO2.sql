@@ -1,0 +1,1031 @@
+--MUNDOBINARIO2
+-----------------
+--SUBCONSULTA |EN COLUMNAS|
+--ESTA CONSULTA LA HICE CON UN INNER JOIN TAMBIEN
+--SELECT 
+--	[soh].[SalesOrderID]
+--	,[soh].[OrderDate]
+--    ,(
+--		SELECT MAX([sod].[UnitPrice])
+--		FROM [Sales].[SalesOrderDetail] AS [sod]
+--		WHERE [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	) AS MaxUnitPrice
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh];
+--SELECT *FROM [Sales].[SalesOrderDetail] AS [sod]
+
+--------------------
+-- SUBCONSULTA EN |JOIN|
+--SELECT
+--	[e1].[BusinessEntityID]
+--	,[e1].[LoginID]
+--	,[e1].[JobTitle]
+--	,[e1].[VacationHours]
+--	,[Sub].[AverageVacation] 
+--FROM 
+--	[HumanResources].[Employee] AS [e1]
+--	INNER JOIN 
+--		(
+--		SELECT
+--			[e2].[JobTitle]
+--			,AVG([e2].[VacationHours]) AS [AverageVacation]
+--		FROM 
+--			[HumanResources].[Employee] AS [e2]
+--		GROUP BY 
+--			[e2].[JobTitle]
+--		) AS [sub]
+--	ON [e1].[JobTitle] = [sub].[JobTitle]
+--WHERE 
+--	[e1].[VacationHours] > [sub].[AverageVacation]
+--ORDER BY 
+--	[e1].[JobTitle];
+-------
+--OTRA FORMA DE HACER LA CONSULTA DE ARRIBA ES USANDO CTE
+--WITH CTE_VacationAVG AS
+--(
+--	SELECT
+--		[e2].[JobTitle]
+--		,AVG([e2].[VacationHours]) AS [AverageVacation]
+--	FROM 
+--		[HumanResources].[Employee] AS [e2]
+--	GROUP BY 
+--		[e2].[JobTitle]
+--)
+
+--SELECT
+--	[e1].[BusinessEntityID]
+--	,[e1].[LoginID]
+--	,[e1].[JobTitle]
+--	,[e1].[VacationHours]
+--	,[cte].[AverageVacation] 
+--FROM 
+--	[HumanResources].[Employee] AS [e1]
+--	INNER JOIN [CTE_VacationAVG] AS [cte]
+--		ON [e1].[JobTitle] = [cte].[JobTitle]
+--WHERE 
+--	[e1].[VacationHours] > [cte].[AverageVacation]
+--ORDER BY 
+--	[e1].[JobTitle];
+----SUBCONSULTA EN |WHERE|
+--SELECT 
+--	[soh].[SalesOrderNumber]
+--	,[soh].[OrderDate]
+--	,[soh].[CustomerID]
+--	,[soh].[TotalDue]
+--	,[sod].[ProductID]
+--	,[sod].[OrderQty]
+--	,[sod].[UnitPrice]
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--WHERE
+--	[sod].[ProductID] 
+--	IN 
+--		(
+--			SELECT 
+--				[ProductID]
+--			FROM
+--				[Production].[Product] AS [p]
+--			WHERE 
+--				[p].[MakeFlag] = 1
+--		);
+----CUANDO HAGO SUBCONSULTAS SOLO PUEDO REGRESAR UN VALOR, UNA COLUMNA
+
+----OTRA FORMA DE HACER EL EJERCICIO DE ARRIBA (DONDE DICE AND PODRIA HABER PUESTO UN WHERE Y IBA A FUNCIONAR)
+--SELECT 
+--	[soh].[SalesOrderNumber]
+--	,[soh].[OrderDate]
+--	,[soh].[CustomerID]
+--	,[soh].[TotalDue]
+--	,[sod].[ProductID]
+--	,[sod].[OrderQty]
+--	,[sod].[UnitPrice]
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--	ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	INNER JOIN [Production].[Product] AS [P]
+--	ON [sod].[ProductID] = [P].[ProductID]
+--AND
+--[p].[MakeFlag] = 1
+--------------------------------------------------------------------------
+-- INSERT INTO
+
+--CREATE TABLE [Sales].[SalesOrderHeaderBackup]
+--	(
+--		[SalesOrderID]	INT			NOT NULL	PRIMARY KEY
+--		,[OrderDate]	DATETIME	NOT NULL
+--		,[ShipDate]		DATETIME	NULL
+--		,[CustomerID]	INT			NOT NULL
+--		,[Status]		TINYINT		NOT NULL
+--		,[TotalDue]		MONEY		NOT NULL
+--		,[TaxAmt]		MONEY		NOT NULL
+--	)
+
+
+--INSERT INTO [Sales].[SalesOrderHeaderBackup]
+--	([SalesOrderID], [OrderDate], [ShipDate], [CustomerID], [Status], [TotalDue], [TaxAmt])
+--SELECT 
+--	[SalesOrderID], [OrderDate], [ShipDate], [CustomerID], [Status], [TotalDue], [TaxAmt]
+--FROM 
+--	[Sales].[SalesOrderHeader]
+--WHERE
+--	[TotalDue] >= 500
+--SET IDENTITY_INSERT[Sales].[SalesOrderHeaderBackup]  ON; --PARA PODER INSERTAR DATOS EN LA TABLA POR SI ME SALE EL ERROR ESTE: No se puede insertar un valor explícito en la columna de identidad de la tabla 'SalesOrderHeaderBackup' cuando IDENTITY_INSERT es OFF.
+
+--SELECT 
+--*
+--FROM [Sales].[SalesOrderHeaderBakckup]
+--DELETE FROM [Sales].[SalesOrderHeaderBackup]
+-------------------------------------------
+--INSERT EXEC
+--PARA ESTO EJEMPLO HE CREADO UN STORE PROCEDURE (QUE NO ESTA EN ESTE QUERY)
+--INSERT INTO [Sales].[SalesOrderHeaderBackup]
+--EXEC [Sales].[SalesOrderByCustomerID] @CustomerID = 29825
+
+--SELECT 
+--*
+--FROM [Sales].[SalesOrderHeader]
+--WHERE CustomerID = 29825
+--AND TaxAmt >= 2500
+----------------------------------------------
+--SELECT INTO (CON ESTE SE COPIA EN LOS COLUMNAS Y EL TIPO DE COLUMNA EN UNA NUEVA TABLA, NOTA: NO SE COPIAN LAS RESTRINCCIONES)
+
+--DROP TABLE IF EXISTS [Sales].[SalesOrderHeaderBakckup]; 
+--SELECT 
+--	[SalesOrderID], [OrderDate], [ShipDate], [CustomerID], [Status], [TotalDue], [TaxAmt]
+--INTO
+--	[Sales].[SalesOrderHeaderBackup]
+--FROM 
+--	[Sales].[SalesOrderHeader]
+--WHERE
+--	[TotalDue] >=150000;
+
+--SELECT
+--*
+--FROM [Sales].[SalesOrderHeaderBackup]
+---------------------------------------------------------------------------------------------------------------------
+--UPDATE EN BASE A JOINS
+
+--SELECT  
+--	[sod].*
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	INNER JOIN [Sales].[Customer] AS [c]
+--		ON [soh].[CustomerID] = [c].[CustomerID]
+--	INNER JOIN [Sales].[SalesTerritory] AS [st]
+--		ON [c].[TerritoryID] = [st].[TerritoryID]
+--WHERE 
+--	[st].[Group] = 'Europe' AND [sod].[ProductID] = 750
+
+
+--UPDATE [sod]
+--SET [sod].[UnitPrice] = 4000
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	INNER JOIN [Sales].[Customer] AS [c]
+--		ON [soh].[CustomerID] = [c].[CustomerID]
+--	INNER JOIN [Sales].[SalesTerritory] AS [st]
+--		ON [c].[TerritoryID] = [st].[TerritoryID]
+--WHERE 
+--	[st].[Group] = 'Europe' AND [sod].[ProductID] = 750
+---------------------------
+--DELETE BASADO EN JOINS
+--SELECT  
+--	[sod].*
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	INNER JOIN [Sales].[Customer] AS [c]
+--		ON [soh].[CustomerID] = [c].[CustomerID]
+--WHERE 
+--	[c].[CustomerID] = 17026
+
+--DELETE FROM [sod]
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--	INNER JOIN [Sales].[Customer] AS [c]
+--		ON [soh].[CustomerID] = [c].[CustomerID]
+--WHERE 
+--	[c].[CustomerID] = 17026
+---------------------------------------------------------------------------------
+--MERGE (El MERGE es un comando para sincronizar dos tablas, Insert, Update y Delete en un solo query, esto ayuda a tener un performance adecuado para el manejo de información masiva.)
+
+--MERGE <table_destino> [AS TARGET]
+--USING <table_origen> [AS SOURCE]
+--   ON <condicion_compara_llaves>
+--[WHEN MATCHED THEN 
+--    <accion cuando coinciden> ]
+--[WHEN NOT MATCHED [BY TARGET] THEN 
+--    <accion cuando no coinciden por destino> ]
+--[WHEN NOT MATCHED BY SOURCE THEN 
+--    <accion cuando no coinciden por origen> ];
+
+--MERGE StudentsC1 AS TGT
+--USING
+--( 
+--SELECT
+--		StudentID
+--		,StudentName
+--		,StudentStatus
+--FROM
+--	StudentsC2
+--)	AS CRT
+--ON
+--( 
+--TGT.StudentID = CRT.StudentID
+--)
+----FOR UPDATE
+--WHEN MATCHED THEN
+--	UPDATE 
+--		SET
+--			TGT.StudentName = CRT.StudentName
+--			,TGT.StudentStatus = CRT.StudentStatus
+----FOR INSERT
+--WHEN NOT MATCHED THEN
+--INSERT
+--(
+--StudentID, StudentName, StudentStatus
+--)
+--VALUES
+--(
+--CRT.StudentID, CRT.StudentName, CRT.StudentStatus
+--);
+
+--SELECT * FROM StudentsC1
+--SELECT * FROM StudentsC2
+-------------------------------------------------
+--MERGE (PARTE2)
+
+--CREATE TABLE Purchasing.Vendor_Temp
+--(
+--	[BusinessEntityID]		INT				NOT NULL
+--	,[AccountNumber]		NVARCHAR(15)	NOT NULL
+--	,[Name]					NVARCHAR(50)	NOT NULL
+--	,[CreditRating]			TINYINT			NOT NULL
+--	,[PreferredVendorStatus]BIT				NOT NULL
+--	,[ActiveFlag]			BIT				NOT NULL
+--)
+
+--SELECT MAX([BusinessEntityID]) FROM [Purchasing].[Vendor]
+
+--SELECT * FROM [Purchasing].[Vendor]
+
+--INSERT INTO Purchasing.Vendor_Temp
+--	([BusinessEntityID],[AccountNumber], [Name], [CreditRating], [PreferredVendorStatus], [ActiveFlag])
+--VALUES
+--	(1699, 'ADVANCED0001', 'Advanced Bicycles', 5, 1, 0)
+--	,(1700,'MORGANB0001', 'Morgan Bike Accessories', 5, 1, 0)
+--	,(1701,'MBMEX001', 'Mundo Binario México', 1, 1, 1)
+--	,(1702,'MBCOL001', 'Mundo Binario Colombia', 1, 1, 1)
+--	,(1703,'MBARG001', 'Mundo Binario Argentina', 1, 1, 1)
+--	,(1704,'MBPER001', 'Mundo Binario Perú', 1, 1, 1)
+
+--SELECT * FROM Purchasing.Vendor_Temp
+--SELECT * FROM Purchasing.Vendor
+
+--MERGE [Purchasing].[Vendor] AS [tgt]
+--USING
+--(
+--	SELECT
+--		[vt].[BusinessEntityID]
+--		,[vt].[AccountNumber]
+--		,[vt].[Name]
+--		,[vt].[CreditRating]
+--		,[vt].[PreferredVendorStatus]
+--		,[vt].[ActiveFlag]
+--	FROM 
+--		Purchasing.Vendor_Temp AS [vt]
+--) AS [src]
+--ON
+--(
+--	[src].[AccountNumber] = [tgt].[AccountNumber]
+--)
+--WHEN MATCHED THEN
+--	UPDATE 
+--		SET
+--			[tgt].[Name] = [src].[Name]
+--			,[tgt].[CreditRating] = [src].[CreditRating]
+--			,[tgt].[PreferredVendorStatus] = [src].[PreferredVendorStatus]
+--			,[tgt].[ActiveFlag] = [src].[ActiveFlag]
+--			,[tgt].[ModifiedDate] = GETDATE()
+--WHEN NOT MATCHED THEN
+--	INSERT
+--	(
+--		[BusinessEntityID]
+--		,[AccountNumber]
+--		,[Name]
+--		,[CreditRating]
+--		,[PreferredVendorStatus]
+--		,[ActiveFlag]
+--		,[PurchasingWebServiceURL]
+--		,[ModifiedDate]
+--	)
+--	VALUES
+--	(
+--		[src].[BusinessEntityID]
+--		,[src].[AccountNumber]
+--		,[src].[Name]
+--		,[src].[CreditRating]
+--		,[src].[PreferredVendorStatus]
+--		,[src].[ActiveFlag]
+--		,NULL
+--		,GETDATE()
+--	);
+--EL MERGE ES MUY RECOMENDABLE PORQUE ES MUY RAPIDO, MAS RAPIDOS QUE LOS BUCLES WHILE, FOR, ETC...
+-------------------------------------------------------------------------
+--INSERT with OUTPUT  quiere decir es que después de una inserción exitosa te regrese valores de salida.
+
+--SELECT * FROM [dbo].[Products];
+
+--INSERT INTO [dbo].[Products] ([product_code],[product_description])
+--OUTPUT
+--	INSERTED.product_id,
+--	INSERTED.product_code,
+--	INSERTED.product_description
+		
+--VALUES
+--	('HBC', 'HOJA BLANCA TAMAÑO CARTA')
+--	,('HCC', 'HOJA DE COLOR TAMAÑO CARTA')
+--	,('ENG', 'ENGRAPADORA')
+
+--CREATE TABLE [dbo].[Brands]
+--(
+--	[brand_id]				UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY
+--	,[brand_name]			VARCHAR(50)	NOT NULL
+--	,[brand_description]	VARCHAR(50)	NULL
+--	,[brand_status]			BIT			NULL
+--)
+
+--INSERT INTO [dbo].[Brands]([brand_name], [brand_description], [brand_status])
+--	OUTPUT
+--		inserted.brand_id, inserted.brand_name
+--VALUES
+--	('HP', 'TECHNOLOGY', 1)
+--	,('DELL', 'TECHNOLOGY', 1)
+--	,('MAC', 'TECHNOLOGY', 1)
+--	,('LENOVO', 'TECHNOLOGY', 0)
+---------------------------------------------------
+--UPDATE with OUTPUT (AQUI CUANDO DESEE ACTUALIZAR REGISTROS, PUES QUE CON EL OUTPUT, PUEDO HACER QUE ME PAREZCAN ESOS REGISTRO QUE ACTUALICE, INSERTED ES LO QUE ACTULICE, Y DELETED ES COMO ESTABA ANTES DE ACTUALIZARSE
+
+--UPDATE [dbo].[Brands] 
+--	SET brand_name = 'LENOVO', [brand_status] = 1
+--OUTPUT 
+--	INSERTED.brand_id
+--	,DELETED.brand_name AS 'NOMBRE VIEJO'
+--	,INSERTED.brand_name AS 'NOMBRE NUEVO'
+--	,DELETED.brand_status AS 'STATUS VIEJO'
+--	,INSERTED.brand_status AS 'NUEVO STATUS'
+--WHERE brand_name = 'LENOVO NEW';
+
+--select * from [dbo].[Brands]
+----------------------------------------------------
+--DELETE with OUTPUT (ESTO QUIERE DECIR QUE CUANDO ELIMINEMOS UN REGISTRO, PUES QUE NOS APAREZCAN EL O LOS REGISTROS QUE HEMOS ELIMINADO, RECORDAR QUE EL DELETED ES PARA SABER LOS VALORES DE LOS REGISTROS ANTES DE BORRARLOS, O ANTES DE EJECUTAR DICHA INSTRUCCION
+
+--DELETE FROM [dbo].[Brands]
+--OUTPUT
+--	DELETED.brand_id,
+--	DELETED.brand_name
+--WHERE brand_id = 'BDBCF95C-87D8-491A-9278-20EE65389F1C';
+
+--select * from [dbo].[Brands]
+-------------------------------------------------------------------------
+-- MERGE with OUTPUT (en este caso caso La cláusula OUTPUT se utiliza para devolver información adicional sobre la operación de MERGE. En este caso, se devuelve la acción (UPDATE o INSERT) que se realizó y el ID del estudiante que se actualizó o insertó.
+
+--MERGE StudentsC1 AS [tgt]
+--USING
+--(
+--	SELECT
+--		[s].[StudentID]
+--		,[s].[StudentName]
+--		,[s].[StudentStatus]
+--	FROM 
+--		StudentsC2 AS [s]
+--) AS [src]
+--ON
+--(
+--	[src].[StudentID] = [tgt].[StudentID]
+--)
+---- For updates
+--WHEN MATCHED THEN
+--	UPDATE 
+--		SET
+--			[tgt].[StudentName] = [src].[StudentName]
+--			,[tgt].[StudentStatus] = [src].[StudentStatus]
+			
+		
+---- For Inserts
+--WHEN NOT MATCHED THEN
+--	INSERT
+--	(
+--		[StudentID], [StudentName], [StudentStatus]
+--	)
+--	VALUES
+--	(
+--		[src].[StudentID], [src].[StudentName], [src].[StudentStatus]
+
+--	)
+--	OUTPUT
+--	$ACTION AS 'ACTION'
+--	,COALESCE(INSERTED.STUDENTID, DELETED.STUDENTID) AS STUDENTID;
+
+--ESTE ES EL RESULTADO QUE SALDRIA
+--ACTION  STUDENTID
+--INSERT	6
+--INSERT	7
+--UPDATE	1
+--UPDATE	2
+
+--SELECT * FROM StudentsC1
+--SELECT * FROM StudentsC2
+
+
+--ESTO NO TIENE QUE VER CON EL TEMA, SOLO ES UN EXPERIMENTO
+--SELECT * FROM StudentsC1
+--UNION
+--SELECT * FROM StudentsC2
+--WHERE NOT EXISTS
+--(SELECT 1 FROM StudentsC1 WHERE StudentsC1.StudentID = StudentsC2.StudentID)
+------------------------------------------------------------------------------------
+--CROSS APPLY y OUTER APPLY (EL CROSS APPLY ES SIMILAR AL INNER JOIN Y EL OUTER APPLY JOIN) El CROSS APPLY  Y OUTER APLLI es especialmente útil cuando se trabaja con funciones de tabla que dependen de valores de otras tablas. EL LOS CROSS APPLY NO SE PONEN ON COMO EN LOS INNER JOIN, SINO SE PONE UN WHERE
+--SELECT 
+--	COUNT(*)
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[CurrencyRate] AS [cr]
+--		ON [soh].[CurrencyRateID] = [cr].[CurrencyRateID]
+--	INNER JOIN [Sales].[Currency] AS [c]
+--		ON [cr].[FromCurrencyCode] = [c].[CurrencyCode]
+--WHERE 
+--	[cr].[ToCurrencyCode]='EUR'
+---------------------
+--NOTAS:
+-- CONTROL + WINDOWS + R PARA OCULTAR LA BARRA DE RESULTADO
+-- NO ES RECOMENDABLE USAR ASTERICOS POR TEMA DE RENDIMIENTO Y ESTETICA
+
+--ESTE CROSS APPLY DA EL MISMO RESULTADO QUE EL DE ARRIBA
+--	SELECT 
+--	*
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	CROSS APPLY
+--		(
+--			SELECT 
+--				cr.*
+--			FROM 
+--				[Sales].[CurrencyRate] AS [cr]
+--				INNER JOIN [Sales].[Currency] AS [c]
+--					ON [cr].[FromCurrencyCode] = [c].[CurrencyCode]
+--			WHERE 
+--				[soh].[CurrencyRateID] = [cr].[CurrencyRateID]
+--		) AS [c1]
+--WHERE 
+--	[c1].[ToCurrencyCode]='EUR'
+--------------------------------
+--EL WITH CTE ES PARA ENCAPSULAR, Y LUEGO LO EJECUTO CON LA INSTRUCCION DE ABAJO(CTE significa "Common Table Expression" (Expresión de tabla común) y es una herramienta que permite definir una consulta que se puede utilizar como una tabla temporal dentro de una consulta principal.)
+--WITH CTE_Currency
+--AS (
+--	SELECT 
+--		DISTINCT
+--		TOP 3 
+--		[CurrencyRateID] 
+--		,[FromCurrencyCode]
+--		,[ToCurrencyCode]
+--		,[ModifiedDate]
+--	FROM [Sales].[CurrencyRate]
+--	ORDER BY [ModifiedDate] DESC
+--)
+
+--SELECT 
+--	[soh].*
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh] 
+--	INNER JOIN CTE_Currency AS [cte]
+--		ON [soh].[CurrencyRateID] = [cte].[CurrencyRateID]
+
+--SELECT 
+--	[soh].*
+--FROM 
+--	[Sales].[SalesOrderHeader] AS [soh]
+--	CROSS APPLY
+--		(
+--			SELECT 
+--				DISTINCT
+--				TOP 3 
+--				[CurrencyRateID] 
+--				,[FromCurrencyCode]
+--				,[ToCurrencyCode]
+--				,[ModifiedDate]
+--			FROM 
+--				[Sales].[CurrencyRate] AS [cr]
+--			ORDER BY 
+--				[ModifiedDate] DESC
+--		) AS [ca]
+--WHERE 
+--	[soh].[CurrencyRateID] = [ca].[CurrencyRateID] 
+		
+
+----OUTER APPLY ( COMO UN LEFT JOIN) Y CROSS APPLY COMO UN INNER JOIN
+--SELECT 
+--	* 
+--FROM 
+--	[Production].[Product] AS [p]
+--	LEFT JOIN [Production].[ProductCategory] AS [pc]
+--		ON [p].[ProductSubcategoryID] = [pc].[ProductCategoryID]
+-----------------------
+--SELECT 
+--	* 
+--FROM 
+--	[Production].[Product] AS [p]
+--	OUTER APPLY
+--		(
+--			SELECT * 
+--			FROM [Production].[ProductCategory] AS [pc]
+--			WHERE [p].[ProductSubcategoryID] = [pc].[ProductCategoryID]
+--		) AS [o1]
+----------------------------------------------------------------------------------------------------------------------------
+--Derived tables Una "derived table" (tabla derivada) en SQL Server es una tabla que se crea como parte de una consulta SELECT, y que se utiliza temporalmente para realizar operaciones en una consulta más compleja. Aunque el derived tables es un nested query puede ser útil en alguna extracción de información, no lo recomiendo para cuando estés en una instancia productiva.
+
+--AQUI EL ROWNUMBER VA CONTAR LOS NUMEROS CONSECUTIVOS QUE HAY EN LA COLUMNA PURCHASEORDERID, osea una columna calculada que utiliza la función ROW_NUMBER() para asignar un número consecutivo a cada detalle de compra para una orden de compra específica. La cláusula PARTITION BY se utiliza para particionar los datos por PurchaseOrderID, y la cláusula ORDER BY se utiliza para ordenar los resultados por PurchaseOrderDetailID.
+--EL SELECT DE ABAJO ES PARA CONTAR REGISTROS DISTINTOS O IGUALES, OSEA PARA ENUMERAR REGISTROS y la cláusula ORDER BY se utiliza para ordenar los registros por PurchaseOrderDetailID.
+--SELECT
+--	[pod].PurchaseOrderID
+--	,[pod].PurchaseOrderDetailID
+--	,ROW_NUMBER() OVER (PARTITION BY [pod].PurchaseOrderID ORDER BY [pod].PurchaseOrderDetailID) AS 'CONSECUTIVOS'
+--	,[pod].[ProductID]
+--	,[pod].[UnitPrice]
+--FROM [Purchasing].[PurchaseOrderDetail] AS [pod]
+--Where [pod].PurchaseOrderID =18
+
+--SELECT
+--	[pod].PurchaseOrderID
+--	,[pod].PurchaseOrderDetailID
+--	,ROW_NUMBER() OVER (ORDER BY [pod].PurchaseOrderDetailID) AS 'REGISTROS'
+--	,[pod].[ProductID]
+--	,[pod].[UnitPrice]
+--FROM [Purchasing].[PurchaseOrderDetail] AS [pod]
+--WHERE [pod].PurchaseOrderID IN (18,19) 
+
+----CON EL SELECT DE ARRIBA VAMOS A PONER EN PRACTICA EL DERIVED TABLES
+--SELECT *
+--	FROM
+--	(
+--	SELECT *
+--		FROM
+--		(	SELECT
+--				[pod].PurchaseOrderID
+--				,[pod].PurchaseOrderDetailID
+--				,ROW_NUMBER() OVER (PARTITION BY [pod].PurchaseOrderID ORDER BY [pod].PurchaseOrderDetailID) AS 'CONSECUTIVOS'
+--				,[pod].[ProductID]
+--				,[pod].[UnitPrice]
+--			FROM [Purchasing].[PurchaseOrderDetail] AS [pod]
+--		) AS [r1]
+--	WHERE [r1].CONSECUTIVOS <=4 
+--	) AS [r2]
+--WHERE [r2].UnitPrice <=10000
+-------------------------------------------------------------------------------------------------------------------------
+--CTE(EL CTE SE DEBE OCUPAR INMEDIATAMENTE SINO DARIA ERROR)
+--WITH CTE_PurchaseOrderDetail
+--AS(
+--SELECT
+--	 ROW_NUMBER() OVER (PARTITION BY [pod].PurchaseOrderID 
+--		ORDER BY [pod].PurchaseOrderDetailID)	AS 'CONSECUTIVOS'
+--	,[pod].[ProductID]							AS [CLAVE PRODUCTO]
+--	,[pod].[UnitPrice]							AS [PRECIO]
+--FROM [Purchasing].[PurchaseOrderDetail] AS [pod]
+--Where [pod].PurchaseOrderID =18 
+--)
+--SELECT * FROM CTE_PurchaseOrderDetail
+--WHERE CONSECUTIVOS < 4;
+
+--ESTE ES EL MISMO RESULTADO DE SELECT DE ARRIBA PERO USANDO DERIVED TABLE
+--SELECT * FROM
+--(
+--	SELECT
+--	 ROW_NUMBER() OVER (PARTITION BY [pod].PurchaseOrderID 
+--		ORDER BY [pod].PurchaseOrderDetailID)	AS 'CONSECUTIVOS'
+--	,[pod].[ProductID]							AS [CLAVE PRODUCTO]
+--	,[pod].[UnitPrice]							AS [PRECIO]
+--FROM [Purchasing].[PurchaseOrderDetail] AS [pod]
+--Where [pod].PurchaseOrderID =18 
+--) AS R1
+--WHERE CONSECUTIVOS <4
+--------------------------
+--;WITH CTE_SOH AS
+--(
+--	SELECT
+--		[soh].[SalesOrderID]
+--		,[soh].[OrderDate]
+--		,[soh].[Status]
+--		,[soh].[SalesOrderNumber]
+--		,[soh].[AccountNumber]
+--		,[soh].[TotalDue]
+--	FROM 
+--		[Sales].[SalesOrderHeader] AS [soh]	
+--	WHERE 
+--		[soh].[AccountNumber] LIKE '10-4020%' AND TotalDue >= 50000
+--)
+
+--,CTE_PRODUCT AS
+--(
+--	SELECT
+--			[P].[ProductID]
+--	FROM
+--			[Production].[Product] AS [P]
+--	WHERE
+--			[P].[MakeFlag] = 1 AND [P].[Color] = 'red'
+--)
+
+--,CTE_SOHD AS
+--(
+--	SELECT
+--		[sohd].[SalesOrderDetailID]
+--		,[sohd].[SalesOrderID]
+--		,[sohd].[ProductID]
+--		,[sohd].[UnitPrice]
+--	FROM
+--		[Sales].[SalesOrderDetail] AS [sohd]
+--	WHERE 
+--		[ProductID] IN (SELECT ProductID FROM CTE_PRODUCT)
+--)
+
+--SELECT
+--	*
+--FROM CTE_SOH AS [soh]
+--INNER JOIN CTE_SOHD AS [sohd]
+--	ON [soh].[SalesOrderID] = [sohd].[SalesOrderID]
+--INNER JOIN CTE_PRODUCT AS [P]
+--	ON [p].[ProductID] = [SOHD].ProductID
+--En este ejemplo, hay tres CTEs definidas:
+--CTE_SOH: selecciona información de ventas de la tabla SalesOrderHeader, filtrando por aquellos pedidos que tienen un número de cuenta que comienza con '10-4020' y un TotalDue de al menos 50000.
+--CTE_PRODUCT: selecciona el ProductID de la tabla Product de aquellos productos que tienen MakeFlag igual a 1 y Color igual a 'red'.
+--CTE_SOHD: selecciona información de ventas de la tabla SalesOrderDetail, filtrando por aquellos detalles de pedidos que tienen un ProductID que se encuentra en la lista de ProductID de la CTE_PRODUCT.
+--Finalmente, la consulta principal selecciona todas las columnas de CTE_SOH y CTE_SOHD, y las une (INNER JOIN) en la columna SalesOrderID. Esto devuelve una lista de todas las ventas que cumplen los criterios de la CTE_SOH, junto con los detalles de venta asociados que cumplen los criterios de la CTE_PRODUCT.
+--NOTA: EN UN AMBIENTE PRODUCTIVO DONDE HAY MUCHOS DATOS ES RECOMENDABLE FILTRAR LOS DATOS DESDE ANTES, OSEA SIEMPRE QUE SE PUEDA, PORQUE SI NO VA IR POR TODA LA INFORMACION SIEMPRE Y PUEDE RELENTIZAR LA CONSULTA
+-------------------------------
+--CTE CON EL MISMO RESULTADO PERO CON DIFERENTE FUENTE DE DATOS
+-- esta consulta utiliza CTE y la cláusula UNION ALL para combinar datos de dos conjuntos de productos diferentes y devolverlos como un solo conjunto de resultados que incluye la fuente de los datos.
+ --WITH CTE_PRODUCTM AS
+ --(
+	--SELECT  
+	--	[p].[ProductID]
+	--	,[p].[Name]
+	--	,[p].[Color]
+	--	,[p].[Class]
+	--	,'SourceM' AS	[Source]
+ --FROM [Production].[Product] AS [p]
+ --WHERE [p].[Class] ='M'
+ --)
+
+ --,CTE_PRODUCTL AS
+ --(
+ --SELECT 
+	--	[p].[ProductID]
+	--	,[p].[Name]
+	--	,[p].[Color]
+	--	,[p].[Class]
+	--	,'SourceL' AS	[Source]
+ --FROM [Production].[Product] AS [p]
+ --WHERE [p].[Class] ='L'
+ --)
+
+ --SELECT [ProductID], [Name], [Color], [Class], [Source] FROM CTE_PRODUCTM
+ --UNION ALL
+ --SELECT [ProductID], [Name], [Color], [Class], [Source] FROM CTE_PRODUCTL;
+ 
+ ----CON ESTO VERIFICAMOS QUE NOS TRAE LA MISMA CANTIDAD DE REGISTROS
+ --SELECT * FROM [Production].[Product] WHERE Class IN ('M','L')
+---------------------------------------------------------------------------------------------------------------------------------------
+--Temporal tables
+--LOCAL
+--A LAS TABLAS TEMPORALES LOCALES SOLO PUEDO HACER SELECT EN ESTE QUERY O SESSION, SI ABRO UNA NUEVA QUERY Y INTENTO HACER UN SELECT PUES ME DARIA UN ERROR
+
+-- esta instrucción T-SQL se utiliza para comprobar si una tabla temporal existe y, si es así, eliminarla para evitar conflictos o errores en la base de datos.
+--IF OBJECT_ID ('Tempdb..#Location_temp') IS NOT NULL
+--BEGIN
+--DROP TABLE #Location_temp
+--END
+
+--CREATE TABLE #Location_temp
+--(
+--	[LocationID]	[smallint]			NOT NULL,
+--	[Name]			[NVARCHAR](50)		NOT NULL,
+--	[CostRate]		[smallmoney]		NOT NULL,
+--	[Availability]	[decimal](8, 2)		NOT NULL,
+--	[ModifiedDate]	[datetime]			NOT NULL,
+--)
+
+--SELECT *FROM #Location_temp
+--SELECT
+--	*
+--FROM [Production].[Location]
+
+--INSERT INTO #Location_temp 
+--SELECT 
+--	[LocationID], 
+--	[Name], 
+--	[CostRate], 
+--	[Availability], 
+--	[ModifiedDate]		
+--FROM 
+--	[Production].[Location]
+--WHERE
+--	[CostRate] = 0
+
+--DELETE FROM #Location_temp 
+--WHERE LocationID = 4;
+
+--UPDATE #Location_temp 
+--SET CostRate = 5 
+--WHERE LocationID IN (6,7);
+
+--PARA QUE SEA UNA TABLA TEMPORAL GLOBAL, SOLO DEBEMOS DE PONERLE DOS (##) EN VEZ DE UNO, CON ESTO PODEMOS HACER SELECT EN OTRA QUERY O EN OTRA SECCION.
+--ESA ES LA PRINCIPAL DIFERENCIA ENTRE LA LOCAL Y LA GLOBAL
+--Para ver donde esta la tabla temporal en la interfaz solo hay que buscar en databases > system databases > tempdb > temporaly tables
+------------------------------------------------------------------------------------
+--ESTO NO TIENE QUE VER CON LAS VISTAS
+--La consulta resultante mostrará una lista de todos los vendorid de la tabla vendor que no están presentes en la tabla secundaria.
+--SELECT V.BusinessEntityID
+--FROM  [Purchasing].[Vendor]  as v
+--LEFT JOIN  [Purchasing].[PurchaseOrderHeader] AS POH
+--ON v.BusinessEntityID = POH.VendorID
+--WHERE POH.VendorID IS NULL;
+------------------------------------------------------------------------------------
+---Vista
+--Cosas a tener en cuenta a la hora de crear vistas
+    --We can use DML operation on a single table only
+    --VIEW should not contain Group By, Having, Distinct clauses, NOTA EL GROUP BY SI SE PUEDE HACER, NOSE LOS OTROS
+    --We cannot use a subquery in a VIEW in SQL Server
+    --We cannot use Set operators in a SQL VIEW
+
+
+--	SELECT 
+--	[poh].[VendorID]
+--	,[v].[Name]
+--	,DATENAME(MONTH, ([poh].[OrderDate]))		AS [MonthName]
+--	,SUM([poh].[TotalDue])						AS [TotalDue]
+--FROM	
+--	[Purchasing].[PurchaseOrderHeader] AS [poh]
+--	INNER JOIN [Purchasing].[Vendor] AS [v]
+--		ON [poh].[VendorID] = [v].[BusinessEntityID]
+--WHERE
+--	YEAR([OrderDate]) = 2014
+--GROUP BY
+--	[poh].[VendorID]
+--	,[v].[Name]
+--	,DATENAME(MONTH, ([poh].[OrderDate]))
+--ORDER BY 1
+----CON EL CREATE CREAMOS LAS VISTAS, CON EL ALTER MODIFICAMOS LA VISTA
+--CREATE VIEW [PuchaseOrderTotalByVendor] AS
+--(
+--	SELECT 
+--		[poh].[VendorID]							AS [PROVEDOR]
+--		,[v].[Name]									AS [NOMBRE]
+--		,DATENAME(MONTH, ([poh].[OrderDate]))		AS [MES]
+--		,SUM([poh].[TotalDue])						AS [Total]
+--	FROM	
+--		[Purchasing].[PurchaseOrderHeader] AS [poh]
+--		INNER JOIN [Purchasing].[Vendor] AS [v]
+--			ON [poh].[VendorID] = [v].[BusinessEntityID]
+	--WHERE
+	--	YEAR([OrderDate]) = 2014
+	--GROUP BY
+	--	[poh].[VendorID]
+	--	,[v].[Name]
+	--	,[poh].[OrderDate]
+--);
+
+--SELECT * FROM [PuchaseOrderTotalByVendor]
+--WHERE MES = 'ENERO'
+--AND TOTAL >10000; --SELECCIONAR VISTA
+--DROP VIEW [PuchaseOrderTotalByVendor]; --ELIMINAR VISTA
+
+--SELECT *FROM [dbo].[Purchasing_OrderTotalByVendor_Designer];
+
+--CREATE VIEW Purchasing.PuchaseOrderTotalByVendorUpdate
+--AS
+--(
+--	SELECT 
+--		[poh].[VendorID]
+--		,[v].[Name]
+--		,DATENAME(MONTH, ([poh].[OrderDate]))	AS 'Month'
+--		,[poh].[TotalDue]						AS 'Total'
+--		,[poh].[Status]							AS 'Status'
+--	FROM	
+--		[Purchasing].[PurchaseOrderHeader] AS [poh]
+--		INNER JOIN [Purchasing].[Vendor] AS [v]
+--			ON [poh].[VendorID] = [v].[BusinessEntityID]
+--	WHERE
+--		YEAR([OrderDate]) = 2014
+--);
+
+--SELECT
+--	*
+--FROM
+--	[Purchasing].[PuchaseOrderTotalByVendorUpdate]
+--WHERE VendorID= 1624 AND Total=31268.7375 AND Month='Agosto';
+
+
+--SELECT 
+--	*
+--FROM 
+--	[Purchasing].[PurchaseOrderHeader]
+--WHERE	VendorID = 1624 
+--		AND TotalDue = 31268.7375
+--		AND DATENAME(MONTH, OrderDate) = 'Agosto'
+--		AND YEAR(OrderDate) = 2014
+
+--ACTUALIZAR DATOS EN LA TABLA (TAMBIEN SE ACTULIZA EN LA VISTA
+--UPDATE [Purchasing].[PurchaseOrderHeader]
+--SET Status = 1
+--WHERE PurchaseOrderID = 3955
+
+--ACTUALIZAR DATOS EN LA VISTA (TAMBIEN SE ACTUALIZA EN LA TABLA).NOTA: NO DEBE TENER FUNCIONES DE agregados o una cláusula DISTINCT o GROUP BY, o un operador PIVOT o UNPIVOT. SINO NO SE PUEDE ACTUALIZAR
+--UPDATE [Purchasing].[PuchaseOrderTotalByVendorUpdate]
+--SET Status = 3
+--WHERE VendorID = 1624 AND Total=31268.7375 AND Month='Agosto';
+
+--FN + F2 PARA RENOMBRAR UNA TABLA, UNA VISTA, UNA BASE DE DATOS, ETC..
+-- SHIFT + ALT + FLECHA ABAJO ME VA SELECCIONAR TODO 
+---------------------------------------------------------------------------------------------------------
+--Table-Valued Functions
+--CREAMOS EL TABLE FUNCTIONS, TIENE COMO PARAMETRO EL @YEAR, Y NOS VA TRAER LOS DATOS DE LA VISTA QUE HICIMOS EN EL ANTERIOR VIDEO
+
+--CREATE FUNCTION ufnGetPurchaseOrderTotalByVendor
+--(	
+--	@Year		AS		INTEGER
+--)
+--RETURNS TABLE 
+--AS
+--RETURN 
+--(
+--	SELECT 
+--		[POTBV].VendorID
+--		,[POTBV].[Name]
+--		,[POTBV].[Month]
+--		,[POTBV].[Total]
+--		,[POTBV].[Status]
+--		,[POTBV].[OrderDate]
+--	FROM 
+--		[Purchasing].[PuchaseOrderTotalByVendorUpdate] AS [POTBV]
+--	WHERE
+--		YEAR(OrderDate) = @YEAR
+		
+--)
+--GO
+--SELECCIONAMOS LA FUNCION QUE ACABAMOS DE DE CREAR Y LE PASAMOS EL PARAMETRO 2014
+--COMO ES UNA FUNCION TIPO TABLAS, PUES PODEMOS HACER JOINS
+--SELECT 
+--	[FnPo].[VendorID]
+--	,[FnPo].[Name]
+--	,[FnPo].[Month]
+--	,[FnPo].[[Total]
+--	,[FnPo].[OrderDate]
+--	,[v].[ActiveFlag]
+--FROM 
+--	[dbo].[ufnGetPurchaseOrderTotalByVendor](2012) AS [FnPo]
+--	INNER JOIN [Purchasing].[Vendor] AS [V]
+--	ON V.BusinessEntityID = [fnPo].VendorID
+--WHERE
+--	[v].[ActiveFlag] = 1
+------------------------------------------------------------------
+--OTRA FUNCION
+-- =============================================
+--ESTO ES DE BUENA PRACTICA PONERLO
+-- Author:		<EDDY>
+-- Create date: <13.05.23
+-- Description:	<Retornar datos de inventary>
+-- =============================================
+--CREATE FUNCTION UdfGetInventory
+--(	
+--	@ProductID AS INT = 0
+--)
+--RETURNS TABLE 
+--AS
+--RETURN 
+--(
+--	SELECT 
+--	CAST([PI].[LocationID] AS VARCHAR(30))	AS [LocationID]
+--	,[PI].[ProductID]						AS [ProductID]
+--	,SUM([Quantity])						AS [TotalStockQuantity]
+--FROM 
+--	[Production].[ProductInventory] AS [PI]
+--WHERE
+--	ProductID = @ProductID
+--GROUP BY
+--	[PI].[ProductID]
+--	,[PI].[LocationID]
+
+--UNION ALL
+
+--	SELECT
+--	'SUMA'				AS [LocationID]
+--	,[PI].[ProductID]	AS [ProductID]
+--	,SUM([Quantity])	AS [TotalStockQuantity]
+--FROM 
+--	[Production].[ProductInventory] AS [PI]
+--WHERE
+--	ProductID = @ProductID
+--GROUP BY
+--	[PI].[ProductID]
+
+--);
+--GO
+--AQUI EN LA SEGUNDA QUERY (DESPUES DEL UNION ALL) La columna LocationID tiene un valor constante de 1000 para cada fila de la tabla resultante. ESTO ES PARA QUE ME AGRUPE SOLAMENTE POR LA PRODUCT
+--EN EL VIDEO EL PUSO 1000 COMO VALOR CONSTATE, PERO AQUI PUSE COMO SUMA  PARA QUE FUERA MAS ENTENDIBLE, PARA ESO TUVE QUE CONVERTIR LA COLUMNA LOCATIONID DEL PRIMER SELECT EN UN VARCHAR, PARA NO HALLA ERRORES, OSEA PARA QUE ME HAGA MATCH
+--SELECT * FROM UdfGetInventory(1);--SI YO APLICO ESTO ME SALDRIA ESTO. TAMBIEN PUEDO AGREGARLE CONDICIONES
+--LOC	PRO     TOTAL
+--1		1		408
+--6		1		324
+--50	1		353
+--SUMA	1		1085
+---------------------------------------------
+--DECLARE @productID			AS INT = 931
+--DECLARE @qty				AS INT = 0
+--DECLARE @bod				AS INT = 50
+
+--SELECT @qty= SUM(sod.OrderQty)FROM [Sales].[SalesOrderHeader] AS [soh]
+--	INNER JOIN [Sales].[SalesOrderDetail] AS [sod]
+--		ON [soh].[SalesOrderID] = [sod].[SalesOrderID]
+--WHERE 
+--	[sod].[ProductID] = @productID 
+--	AND CAST(OrderDate AS DATE) >= '2013-05-30'
+--GROUP BY 
+-- sod.ProductID
+
+--SELECT @qty
+--SELECT * FROM [dbo].[UdfGetInventory](@productID)
+
+-- IF (@qty <= (SELECT TotalStockQuantity FROM [dbo].[UdfGetInventory](@productID) WHERE LocationID= @bod)) --OJO CON ESTO SI PONE DIFERENTE PUEDO TENER PROBLEMAS OSEA SI PONE @QTY > PRINT 'NO DISPONIBLE', MEJOR PONERLO COMO ESTA ESCRITO AQUI
+-- BEGIN
+--	PRINT 'DISPONIBLE'
+--END
+--ELSE
+--BEGIN
+--	PRINT 'NO DISPONIBLE'
+--END
+--PARA ESTE EJEMPLO VOY PONER LA COLUMNA DE SUMA EN INT, PARA QUE NO HALLA ERRORES, OSEA LA COLUMNA QUE HABIA CONVERTIDO ANTERIORMENTE EN VARCHAR
+--En resumen, este conjunto de instrucciones utiliza variables y consultas para determinar si un producto está disponible en una ubicación específica, 
+--comparando la cantidad de inventario disponible con la cantidad de productos vendidos en pedidos realizados después de una fecha determinada. 
+--Si la cantidad de inventario disponible es suficiente, se imprime "DISPONIBLE", de lo contrario se imprime "NO DISPONIBLE".
+--------------------------------------------------------------------------------------------------------------------------------
+--GROUP BY AND HAVING (PARA HAVING ES NECESARIO UNA FUNCION DE AGREGADO (SUM, MAX, MIN, COUNT, ETC.) Y UN GROUP BY, PARA EL GROUP BY LO NORMAL ES QUE SE APLICA A FUNCIONES DE AGREGADO, AUNQUE AVECES NO ES LA CUESTION
+
+--SELECT 
+--	[sod].[ProductID]
+--	,[p].[Name]
+--	,COUNT([sod].[ProductID])	AS ProdCount
+--	,SUM([sod].[UnitPrice])		AS [Total]
+--	,[p].[Class]
+--FROM 
+--	[Sales].[SalesOrderDetail] AS [sod]
+--	INNER JOIN [Production].[Product] AS [p]
+--		ON [p].[ProductID] = [sod].[ProductID]
+--WHERE 
+--	[p].[Class] IS NOT NULL
+--	--AND COUNT([sod].[ProductID]) >=200
+--GROUP BY
+--	[sod].[ProductID]
+--	,[p].[Name]
+--	,[p].[Class]
+--	,[p].[Color]
+
+--HAVING
+--	COUNT([sod].[ProductID]) >= 500
+----------------------------------------
+--SELECT * FROM [dbo].[Employees]
+--SELECT * FROM [dbo].[Departments]
+--ESTO ES PARA SABER EL DEPARTAMENTO QUE MAS GANE Y TIENE MENOS EMPLEADOS
+--SELECT
+--	[d].department_id
+--	,[d].department_name
+--	,SUM([e].employee_salary)		AS 'SUMA SALARIO'
+--	,COUNT([e].[department_id])		AS 'CANTIDAD DE EMPLEADOS'
+--FROM  
+--	[dbo].[Departments]				AS[d]
+--	INNER JOIN [dbo].[Employees]	AS [e]
+--ON [e].department_id = d.department_id
+--	GROUP BY 
+--	[d].department_id
+--	,[d].department_name
+--HAVING
+--	SUM([e].employee_salary) >=800
+--	AND COUNT([e].[department_id]) <=2
+--ORDER BY
+--	 SUM([e].employee_salary) DESC
+	
+--ESTE COMANDO LO USE PARA DARME 'PERMISO' PARA CREAR EL DIAGRAMA DE LA BASE DE DATOS ADVENTURE WORK YA QUE NO LOS TENIA
+--USE [AdventureWorks2019]
+--GO
+--EXEC dbo.sp_changedbowner @loginame = N'sa', @map = false
+--GO
+
+--MOSTRAR EL ID EN UN CONSULTA NO ES LO NORMAL, CASI NUNCA SE RQUIEREN,
